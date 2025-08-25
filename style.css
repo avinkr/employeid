@@ -1,0 +1,27 @@
+body { font-family: Arial, sans-serif; background:#f3f4f6; margin:20px; }
+.sicg-wrap{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:900px){.sicg-wrap{grid-template-columns:1fr}}
+.sicg-left{background:#fff;padding:16px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+.sicg-field{margin-bottom:12px;display:flex;flex-direction:column}
+.sicg-field label{font-weight:600;margin-bottom:6px}
+.sicg-field input{padding:8px;border:1px solid #ccc;border-radius:8px}
+.sicg-actions{margin-top:12px;display:flex;gap:10px}
+.sicg-actions button{padding:10px 14px;border:none;border-radius:10px;cursor:pointer;font-weight:600}
+#sicg_download_png{background:#16a34a;color:#fff}
+#sicg_download_pdf{background:#fff;color:#16a34a;border:2px solid #16a34a}
+
+.sicg-card{width:350px;height:530px;background:#fff;border-radius:16px;overflow:hidden;position:relative;border:1px solid #ccc;box-shadow:0 10px 25px rgba(0,0,0,.1)}
+.sicg-card-header{background:linear-gradient(160deg,#0e7d35 0%,#0d6b2e 60%,#fff 60%);height:140px;display:flex;align-items:center;padding:12px;color:#fff;gap:12px}
+.sicg-logo{background:#fff;color:#0d6b2e;padding:6px;font-weight:700;border-radius:6px}
+.sicg-org-name{font-size:18px;font-weight:700}
+.sicg-org-tagline{font-size:12px}
+.sicg-photo-frame{position:absolute;top:90px;left:20px;width:120px;height:140px;background:#eee;border:5px solid #0e7d35;border-radius:10px;overflow:hidden}
+.sicg-photo-frame img{width:100%;height:100%;object-fit:cover}
+.sicg-info{position:absolute;top:250px;left:20px;right:20px;display:flex;flex-direction:column;gap:6px}
+.sicg-info .row{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:4px 0}
+.sicg-info .label{font-weight:700;color:#065f46}
+.sicg-info .val{font-weight:600;color:#111}
+.sicg-footer{position:absolute;bottom:0;left:0;right:0;background:#0e7d35;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center}
+.sicg-footer .barcode{height:24px;width:140px;background:repeating-linear-gradient(90deg,#000 0,#000 2px,#fff 2px,#fff 4px)}
+.sicg-footer .dates{font-size:12px;text-align:right}
+.sicg-tip{font-size:12px;color:#555;margin-top:10px}
