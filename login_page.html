@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --brand1:#1e3c72;
+      --brand2:#2a5298;
+      --err:#d32f2f;
+      --ok:#16a34a;
+    }
+    body {
+      margin:0; 
+      font-family:Cambria, serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:100vh;
+      background:linear-gradient(135deg,var(--brand1),var(--brand2));
+    }
+    .login-card {
+      width:380px;
+      background:#fff;
+      border-radius:18px;
+      padding:32px;
+      box-shadow:0 12px 36px rgba(0,0,0,.25);
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    h2 {
+      text-align:center;
+      margin:0 0 10px;
+      font-weight:800;
+      color:var(--brand1);
+    }
+    .field {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .inp {
+      border:1px solid #d1d5db;
+      border-radius:12px;
+      padding:12px 14px;
+      font-size:16px;
+    }
+    .btn {
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      padding:12px;
+      font-weight:700;
+      font-size:15px;
+      background:var(--brand2);
+      color:#fff;
+      transition:0.25s;
+    }
+    .btn:hover { background:#17428a; }
+    .error {
+      color:var(--err);
+      font-size:14px;
+      text-align:center;
+      display:none;
+    }
+    .success {
+      color:var(--ok);
+      font-size:14px;
+      text-align:center;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2>Employee Login</h2>
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" type="text" class="inp" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" class="inp" />
+    </div>
+    <button class="btn" id="loginBtn">Login</button>
+    <div class="error" id="errorMsg">Invalid username or password</div>
+    <div class="success" id="successMsg">Login successful… redirecting</div>
+  </div>
+
+  <script>
+    const USERNAME = "admin";
+    const PASSWORD = "12345";
+
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      const u = document.getElementById("username").value.trim();
+      const p = document.getElementById("password").value.trim();
+      const err = document.getElementById("errorMsg");
+      const suc = document.getElementById("successMsg");
+
+      if (u === USERNAME && p === PASSWORD) {
+        err.style.display = "none";
+        suc.style.display = "block";
+        localStorage.setItem("loggedIn","true");
+        setTimeout(()=>{ window.location.href="index_frontimg.html"; },1200);
+      } else {
+        suc.style.display = "none";
+        err.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
