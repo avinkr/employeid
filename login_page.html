@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Login</title>
+  <title>QR Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --brand1:#1e3c72;
@@ -12,7 +13,7 @@
       --ok:#16a34a;
     }
     body {
-      margin:0; 
+      margin:0;
       font-family:Cambria, serif;
       display:flex;
       align-items:center;
@@ -29,6 +30,7 @@
       display:flex;
       flex-direction:column;
       gap:18px;
+      align-items:center;
     }
     h2 {
       text-align:center;
@@ -40,6 +42,7 @@
       display:flex;
       flex-direction:column;
       gap:6px;
+      width:100%;
     }
     .inp {
       border:1px solid #d1d5db;
@@ -57,53 +60,57 @@
       background:var(--brand2);
       color:#fff;
       transition:0.25s;
+      width:100%;
     }
     .btn:hover { background:#17428a; }
-    .error {
-      color:var(--err);
+    .error, .success {
       font-size:14px;
       text-align:center;
       display:none;
     }
-    .success {
-      color:var(--ok);
-      font-size:14px;
-      text-align:center;
-      display:none;
+    .error { color:var(--err); }
+    .success { color:var(--ok); }
+    #qrcode {
+      margin:10px auto;
     }
   </style>
 </head>
 <body>
   <div class="login-card">
-    <h2>Employee Login</h2>
+    <h2>QR Code Login</h2>
+    <div id="qrcode"></div>
+    <p style="font-size:20px;color:#444;">Scan QR → copy the code → enter below</p>
+
     <div class="field">
-      <label for="username">Username</label>
-      <input id="username" type="text" class="inp" />
-    </div>
-    <div class="field">
-      <label for="password">Password</label>
-      <input id="password" type="password" class="inp" />
+      <label for="token">Enter Code</label>
+      <input id="token" type="text" class="inp" />
     </div>
     <button class="btn" id="loginBtn">Login</button>
-    <div class="error" id="errorMsg">Invalid username or password</div>
+    <div class="error" id="errorMsg">Invalid code</div>
     <div class="success" id="successMsg">Login successful… redirecting</div>
   </div>
 
   <script>
-    const USERNAME = "admin";
-    const PASSWORD = "12345";
+    // Generate a random token
+    const TOKEN = "LOGIN-" + Math.random().toString(36).substring(2,10).toUpperCase();
+
+    // Render QR code with the token
+    new QRCode(document.getElementById("qrcode"), {
+      text: TOKEN,
+      width: 150,
+      height: 150
+    });
 
     document.getElementById("loginBtn").addEventListener("click", () => {
-      const u = document.getElementById("username").value.trim();
-      const p = document.getElementById("password").value.trim();
+      const input = document.getElementById("token").value.trim();
       const err = document.getElementById("errorMsg");
       const suc = document.getElementById("successMsg");
 
-      if (u === USERNAME && p === PASSWORD) {
+      if (input === TOKEN) {
         err.style.display = "none";
         suc.style.display = "block";
         localStorage.setItem("loggedIn","true");
-        setTimeout(()=>{ window.location.href="index_frontimg.html"; },1200);
+        setTimeout(()=>{ window.location.href="idcard_multi_2.html"; },1200);
       } else {
         suc.style.display = "none";
         err.style.display = "block";

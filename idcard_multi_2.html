@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ID Card Generator — A4 4x4 Sheet Export</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+   <script>
+  if (!localStorage.getItem("loggedIn") || localStorage.getItem("loggedIn") !== "true") {
+    window.location.href = "login_page.html"; // redirect to login
+  }
+</script>
+
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+ 
+
+  <style>
+    :root{
+      --brand1:#1e3c72;
+      --brand2:#2a5298;
+      --ok:#16a34a;
+      --ink:#0f172a;
+      --card-w:420px;
+      --card-h:700px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:24px;
+      font-family:Cambria, "Times New Roman", serif;
+      background:linear-gradient(135deg,var(--brand1),var(--brand2));
+      color:#111827;
+    }
+    .shell{max-width:1200px; margin:0 auto; display:flex; gap:30px; flex-wrap:wrap; align-items:flex-start; justify-content:center;}
+    .card{width:380px; background:#fff; border-radius:18px; padding:22px; box-shadow:0 18px 40px rgba(0,0,0,.22);}
+    .title{margin:0 0 14px; font-weight:800; color:var(--brand1); text-align:center}
+    .field{display:flex; flex-direction:column; gap:8px; margin:12px 0}
+    .inp{border:1px solid #d1d5db; border-radius:12px; padding:10px 12px; font-size:15px;}
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+    .btn{flex:1; min-width:140px; border:none; border-radius:12px; cursor:pointer; padding:10px 12px; font-weight:800; font-size:14px;}
+    .btn-primary{background:var(--brand2); color:#fff}
+    .btn-blue{background:#0059b2; color:#fff}
+    .btn-green{background:var(--ok); color:#fff}
+    .btn-outline{background:#fff; border:2px solid var(--ok); color:var(--ok)}
+    .status{margin-top:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:8px 10px; display:flex; align-items:center; gap:8px;}
+    .dot{width:10px; height:10px; border-radius:50%}
+    .dot.gray{background:#cbd5e1} .dot.green{background:#22c55e} .dot.blue{background:#3b82f6}
+    .preview{display:flex; flex-direction:column; align-items:center; gap:18px;}
+
+    /* ID card look (front + back) */
+    .id-front,.id-back{
+      width:var(--card-w);
+      height:var(--card-h);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:0 10px 24px rgba(0,0,0,.28);
+      background:#fff; position:relative;
+      background-size:cover; background-position:center;
+    }
+    .id-front{ background-image:url('assets/front.png'); }
+    .id-back { background-image:url('assets/back.png'); }
+
+    .frame{position:absolute; left:50%; top:200px; transform:translateX(-50%); width:140px; height:170px; border:6px solid #202c39; border-radius:14px; background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;}
+    .ph{color:#9ca3af; font-weight:700; letter-spacing:.1em}
+    .info { position:absolute; top:420px; left:0; right:0; display:flex; flex-direction:column; gap:6px; align-items:center; color:#fff; text-align:center; padding:0 12px;}
+    .name{font-size:28px; font-weight:800; margin-top:6px; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,.35)}
+    .role{font-size:19px; margin-top:6px; color:#fff}
+    .pill { background:#fff; color:#103952; border-radius:999px; padding:6px 16px; font-size:18px; font-weight:800; display:inline-block; margin-top:6px;}
+    .blood{font-size:18px; font-weight:700; margin-top:6px; color:#fff}
+    .barcode{position:absolute; bottom:36px; left:0; right:0; text-align:center;}
+    .barcode svg{width:260px !important; height:80px !important;}
+
+    /* generated list */
+    .generated-panel{width:380px; background:#fff; border-radius:12px; padding:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); max-height:720px; overflow:auto;}
+    .generated-row{display:flex; gap:10px; align-items:center; padding:8px; border-radius:8px; border-bottom:1px solid #eee}
+    .generated-thumb{width:90px; height:150px; border-radius:8px; overflow:hidden; border:1px solid #ddd; background:#f7f7f7; display:flex; align-items:center; justify-content:center}
+    .generated-meta{flex:1}
+    .generated-meta b{display:block}
+    .generated-actions button{margin-left:6px; padding:6px 8px; border-radius:8px; border:none; cursor:pointer; font-weight:700}
+
+    /* responsive */
+    @media(max-width:1100px){
+      .shell{flex-direction:column; align-items:center}
+      .generated-panel{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- FORM CARD -->
+    <div class="card">
+      <h2 class="title">Employee Details</h2>
+
+      <div class="field"><label>Upload Photo</label><input id="photo" type="file" accept="image/*" class="inp" /></div>
+      <div class="field"><label>Full Name</label><input id="name" class="inp" type="text" /></div>
+      <div class="field"><label>Role</label><input id="role" class="inp" type="text" /></div>
+      <div class="field"><label>Employee ID</label><input id="empid" class="inp" type="text" /></div>
+      <div class="field">
+        <label>Blood Group</label>
+        <select id="blood" class="inp">
+          <option value="">Select</option>
+          <option>O+ (O Positive)</option>
+          <option>O- (O Negative)</option>
+          <option>A+ (A Positive)</option>
+          <option>A- (A Negative)</option>
+          <option>B+ (B Positive)</option>
+          <option>B- (B Negative)</option>
+          <option>AB+ (AB Positive)</option>
+          <option>AB- (AB Negative)</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button id="generateBtn" class="btn btn-green" type="button">Generate</button>
+        <button id="downloadAllPdf" class="btn btn-outline" type="button">Download All PDF</button>
+      </div>
+
+      <div class="actions" style="margin-top:8px">
+        <button id="saveBtn" class="btn btn-primary" type="button">Save to Excel (append)</button>
+        <button id="downloadExcel" class="btn btn-blue" type="button">Download Excel</button>
+        <button id="downloadA4Sheet" class="btn btn-primary" type="button">Download A4 Sheets (4×4)</button>
+      </div>
+
+      <div class="status" id="genStatus"><div class="dot gray" id="statusDot"></div><div id="statusText">Idle</div></div>
+      <div style="margin-top:8px;font-size:13px;color:#0f172a;opacity:.9">Tip: Use <b>Generate</b> to queue cards. Edit from the list before final download.</div>
+    </div>
+
+    <!-- PREVIEW + GENERATED LIST -->
+    <div style="display:flex;flex-direction:column;gap:18px;align-items:center;">
+
+      <!-- PREVIEW -->
+      <div class="preview">
+        <div id="cardFront" class="id-front" role="presentation">
+          <div class="frame" id="photoFrame"><span class="ph" id="phText">PHOTO</span></div>
+          <div class="info">
+            <div class="name" id="prevName">—</div>
+            <div class="role" id="prevRole">—</div>
+            <div class="pill" id="prevId">ID No:</div>
+            <div class="blood" id="prevBlood">Blood:</div>
+          </div>
+          <div class="barcode"><svg id="barcode"></svg></div>
+        </div>
+
+        <!-- simple back placeholder -->
+        <div id="cardBack" class="id-back" style="margin-top:12px; display:flex; align-items:center; justify-content:center;">
+        </div>
+      </div>
+
+      <!-- GENERATED LIST -->
+      <div class="generated-panel" id="generatedPanel">
+        <h3 style="margin:0 0 8px;">Generated Cards</h3>
+        <div id="generatedList">
+          <!-- rows inserted here -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* ========= Utilities & state ========= */
+const $ = id => document.getElementById(id);
+
+// Inputs + preview refs
+const inputs = {
+  name: $('name'), role: $('role'), empid: $('empid'), blood: $('blood'), photo: $('photo')
+};
+const prev = {
+  name: $('prevName'), role: $('prevRole'), id: $('prevId'), blood: $('prevBlood')
+};
+const photoFrame = $('photoFrame'), phText = $('phText');
+
+let editingIndex = -1; // -1 = create mode; >=0 = editing a generated card index
+
+// In-memory excel data (first row = header)
+let excelData = [["Name","Role","ID","Blood Group"]];
+
+// generatedCards holds objects: { data: {name,role,id,blood}, frontDataUrl, backDataUrl }
+let generatedCards = [];
+
+/* ========= Live preview binding ========= */
+function updatePreviewField(key, value){
+  if(key === 'empid') prev.id.textContent = "ID No: " + (value || '—');
+  else if(key === 'blood') prev.blood.textContent = "Blood: " + (value || '—');
+  else prev[key].textContent = value || '—';
+  updateBarcode();
+}
+
+['name','role','empid','blood'].forEach(k=>{
+  inputs[k].addEventListener('input', e => updatePreviewField(k, e.target.value));
+});
+
+// Photo upload -> set frame background
+inputs.photo.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f){ photoFrame.style.backgroundImage = 'none'; phText.style.display='block'; return; }
+  const rdr = new FileReader();
+  rdr.onload = () => {
+    photoFrame.style.backgroundImage = `url(${rdr.result})`;
+    photoFrame.style.backgroundSize = 'cover';
+    photoFrame.style.backgroundPosition = 'center';
+    phText.style.display = 'none';
+  };
+  rdr.readAsDataURL(f);
+});
+
+/* ========= Barcode ========= */
+function updateBarcode(){
+  const code = (inputs.empid.value + " " + inputs.name.value).trim();
+  if(!code){ // clear svg
+    const svg = document.querySelector('#barcode'); svg.innerHTML=''; return;
+  }
+  try{
+    JsBarcode("#barcode", code, {format:"CODE128", width:1, height:30, displayValue:false, font:"Cambria"});
+  }catch(err){
+    // ignore
+  }
+}
+
+/* ========= Status helpers ========= */
+function setStatus(text, colorClass='gray'){
+  const dot = $('statusDot'), txt = $('statusText');
+  dot.className = 'dot ' + (colorClass || 'gray');
+  txt.textContent = text;
+}
+
+/* ========= Capture helpers ========= */
+async function captureNode(node, opts = {scale:3}){
+  // html2canvas returns a canvas
+  const canvas = await html2canvas(node, {scale: opts.scale ?? 3, useCORS: true, backgroundColor: null});
+  return canvas;
+}
+
+/* ========= UI: Generated list rendering ========= */
+function renderGeneratedList(){
+  const list = $('generatedList');
+  list.innerHTML = '';
+  if(generatedCards.length === 0){
+    list.innerHTML = `<div style="padding:10px;color:#555">No generated cards yet. Click Generate to queue this card.</div>`;
+    return;
+  }
+
+  generatedCards.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'generated-row';
+
+    const thumb = document.createElement('div');
+    thumb.className = 'generated-thumb';
+    const img = document.createElement('img');
+    img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
+    img.src = item.frontDataUrl;
+    thumb.appendChild(img);
+
+    const meta = document.createElement('div');
+    meta.className = 'generated-meta';
+    meta.innerHTML = `<b>${escapeHtml(item.data.name)}</b><div style="color:#666;margin-top:6px">${escapeHtml(item.data.role)} — ${escapeHtml(item.data.id)}</div>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'generated-actions';
+    actions.innerHTML = `
+      <button onclick="editGenerated(${i})" title="Edit">✏️</button>
+      <button onclick="removeGenerated(${i})" title="Remove">🗑️</button>
+      <button onclick="downloadSingle(${i})" title="Download Single PDF">📄</button>
+    `;
+
+    row.appendChild(thumb);
+    row.appendChild(meta);
+    row.appendChild(actions);
+
+    list.appendChild(row);
+  });
+}
+
+/* ========= Escape helper for safety when injecting text ========= */
+function escapeHtml(s){
+  if(!s) return '';
+  return String(s).replace(/[&<>"'`=\/]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;','`':'&#96;','=':'&#61;'}[c];});
+}
+
+/* ========= Generate / Update logic ========= */
+const generateBtn = $('generateBtn');
+generateBtn.addEventListener('click', async () => {
+  setStatus('Generating...', 'blue');
+  generateBtn.disabled = true;
+
+  try {
+    // Validate
+    const name = inputs.name.value.trim();
+    const id = inputs.empid.value.trim();
+    if(!name || !id){ alert('Name and Employee ID are required.'); setStatus('Idle','gray'); generateBtn.disabled=false; return; }
+
+    const data = {
+      name,
+      role: inputs.role.value.trim(),
+      id,
+      blood: inputs.blood.value.trim()
+    };
+
+    // capture front and back canvases
+    const frontCanvas = await captureNode($('cardFront'), {scale:3});
+    const backCanvas  = await captureNode($('cardBack'), {scale:3});
+
+    const frontDataUrl = frontCanvas.toDataURL('image/png');
+    const backDataUrl  = backCanvas.toDataURL('image/png');
+
+    if(editingIndex >= 0){
+      // Update existing generated card
+      generatedCards[editingIndex] = { data, frontDataUrl, backDataUrl };
+
+      // Also update excel row linked to this card (we store link by same index offset)
+      const excelRowIndex = 1 + editingIndex;
+      if(excelRowIndex < excelData.length){
+        excelData[excelRowIndex] = [data.name, data.role, data.id, data.blood];
+      }
+
+      setStatus('Card updated in queue', 'green');
+      editingIndex = -1;
+      generateBtn.textContent = 'Generate';
+    } else {
+      // Append new card
+      generatedCards.push({ data, frontDataUrl, backDataUrl });
+      // Append to excelData row
+      excelData.push([data.name, data.role, data.id, data.blood]);
+      setStatus('Card added to queue', 'green');
+    }
+
+    renderGeneratedList();
+  } catch(err){
+    console.error(err);
+    alert('Error while generating card. See console for details.');
+    setStatus('Error', 'err');
+  } finally {
+    generateBtn.disabled = false;
+  }
+});
+
+/* ========= Remove, Edit functions (exposed) ========= */
+window.removeGenerated = function(i){
+  if(!confirm('Remove this generated card from the queue?')) return;
+  // remove excel entry at same relative index (header offset)
+  const excelRowIndex = 1 + i;
+  if(excelRowIndex >= 0 && excelRowIndex < excelData.length){
+    excelData.splice(excelRowIndex, 1);
+  }
+  generatedCards.splice(i,1);
+  // if we were editing that index, cancel editing
+  if(editingIndex === i){ editingIndex = -1; generateBtn.textContent = 'Generate'; }
+  if(editingIndex > i) editingIndex -= 1;
+  renderGeneratedList();
+  setStatus('Removed', 'gray');
+};
+
+window.editGenerated = function(i){
+  const g = generatedCards[i];
+  inputs.name.value = g.data.name;
+  inputs.role.value = g.data.role;
+  inputs.empid.value = g.data.id;
+  inputs.blood.value = g.data.blood;
+  alert('Note: browsers do not allow pre-filling file inputs. Re-upload the photo if needed.');
+  updatePreviewField('name', g.data.name);
+  updatePreviewField('role', g.data.role);
+  updatePreviewField('empid', g.data.id);
+  updatePreviewField('blood', g.data.blood);
+  editingIndex = i;
+  generateBtn.textContent = 'Update';
+  setStatus('Editing mode — Update to save changes', 'blue');
+};
+
+/* ========= Download single card as PDF ========= */
+window.downloadSingle = async function(i){
+  const item = generatedCards[i];
+  if(!item){ alert('Card not found'); return; }
+  setStatus('Preparing PDF...', 'blue');
+  try{
+    const { frontDataUrl, backDataUrl, data } = item;
+    const { jsPDF } = window.jspdf;
+    const img = new Image(); img.src = frontDataUrl; await img.decode();
+    const w = img.width, h = img.height;
+    const pdf = new jsPDF({unit:'px', format:[w,h]});
+    pdf.addImage(frontDataUrl, 'PNG', 0, 0, w, h);
+    const img2 = new Image(); img2.src = backDataUrl; await img2.decode();
+    pdf.addPage([img2.width, img2.height]);
+    pdf.addImage(backDataUrl, 'PNG', 0, 0, img2.width, img2.height);
+    pdf.save(`${sanitizeFilename(data.name||data.id)}.pdf`);
+    setStatus('Saved single PDF', 'green');
+  }catch(err){
+    console.error(err); alert('Failed to create PDF for single card');
+    setStatus('Error', 'err');
+  }
+};
+
+/* ========= Download ALL generated cards into one multi-page PDF (original behavior) ========= */
+$('downloadAllPdf').addEventListener('click', async () => {
+  if(generatedCards.length === 0){ alert('No generated cards to download.'); return; }
+  setStatus('Building PDF for all cards...', 'blue');
+  try {
+    const { jsPDF } = window.jspdf;
+
+    const first = generatedCards[0];
+    const firstImg = new Image(); firstImg.src = first.frontDataUrl; await firstImg.decode();
+    const pageW = firstImg.width;
+    const pageH = firstImg.height;
+    const pdf = new jsPDF({unit:'px', format: [pageW, pageH]});
+
+    for(let idx=0; idx<generatedCards.length; idx++){
+      const item = generatedCards[idx];
+      if(idx === 0){
+        pdf.addImage(item.frontDataUrl, 'PNG', 0, 0, pageW, pageH);
+      } else {
+        pdf.addPage([pageW, pageH]);
+        pdf.addImage(item.frontDataUrl, 'PNG', 0, 0, pageW, pageH);
+      }
+      const backImg = new Image(); backImg.src = item.backDataUrl; await backImg.decode();
+      pdf.addPage([pageW, pageH]);
+      pdf.addImage(item.backDataUrl, 'PNG', 0, 0, pageW, pageH);
+    }
+
+    pdf.save('All_IDCards.pdf');
+    setStatus('All cards saved to PDF', 'green');
+  } catch(err) {
+    console.error(err); alert('Error generating multi-page PDF');
+    setStatus('Error', 'err');
+  }
+});
+
+/* ========= Download A4 sheets (4x4 grid) ========= */
+$('downloadA4Sheet').addEventListener('click', async () => {
+  if(generatedCards.length === 0){ alert('No generated cards to place on sheet.'); return; }
+  setStatus('Preparing A4 sheets...', 'blue');
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth(); // 595
+    const pageH = pdf.internal.pageSize.getHeight(); // 842
+
+    // layout
+    const cols = 4, rows = 4;
+    const margin = 20; // page margin in pt
+    const gap = 8;     // gap between cards
+    const usableW = pageW - margin*2 - (cols-1)*gap;
+    const usableH = pageH - margin*2 - (rows-1)*gap;
+    const cellW = usableW / cols;
+    const cellH = usableH / rows;
+
+    // Build an array of images: front then back per card
+    const images = [];
+    for(const g of generatedCards){
+      images.push(g.frontDataUrl);
+      images.push(g.backDataUrl);
+    }
+
+    // iterate over images and place them in grid
+    let placed = 0;
+    for(let idx=0; idx<images.length; idx++){
+      const imgUrl = images[idx];
+      // compute which page / row / col
+      const onPageIndex = placed % (cols*rows);
+      const pageIndex = Math.floor(placed / (cols*rows));
+
+      if(onPageIndex === 0 && placed > 0){
+        pdf.addPage();
+      }
+
+      const col = onPageIndex % cols;
+      const row = Math.floor(onPageIndex / cols);
+
+      const x = margin + col * (cellW + gap);
+      const y = margin + row * (cellH + gap);
+
+      // draw image preserving aspect within cellW x cellH
+      const img = new Image();
+      img.src = imgUrl;
+      // await decode to get natural size
+      // decode might fail on some older browsers; wrap in try
+      try{ await img.decode(); } catch(e){ /* ignore */ }
+
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if(iw && ih){
+        const scale = Math.min(cellW/iw, cellH/ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        // center inside cell
+        const dx = x + (cellW - dw)/2;
+        const dy = y + (cellH - dh)/2;
+        pdf.addImage(imgUrl, 'PNG', dx, dy, dw, dh);
+      } else {
+        // fallback: fill the cell area
+        pdf.addImage(imgUrl, 'PNG', x, y, cellW, cellH);
+      }
+
+      placed++;
+    }
+
+    // Save
+    pdf.save('IDCards_4x4_Sheets.pdf');
+    setStatus('A4 sheets downloaded', 'green');
+  } catch(err) {
+    console.error(err);
+    alert('Error creating A4 sheets. See console.');
+    setStatus('Error', 'err');
+  }
+});
+
+/* ========= Excel functions ========= */
+// Save current form row to excelData (append)
+$('saveBtn').addEventListener('click', () => {
+  const name = inputs.name.value.trim(), id = inputs.empid.value.trim();
+  if(!name || !id){ alert('Name and ID required to save'); return; }
+  excelData.push([name, inputs.role.value.trim(), id, inputs.blood.value.trim()]);
+  setStatus('Row appended to in-memory Excel', 'green');
+});
+
+// Download Excel file with current excelData
+$('downloadExcel').addEventListener('click', () => {
+  if(excelData.length <= 1){ if(!confirm('Excel has no data rows (only header). Download anyway?')) return; }
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Entries");
+  XLSX.writeFile(wb, "IDCardEntries.xlsx");
+  setStatus('Excel downloaded', 'green');
+});
+
+/* ========= small helpers ========= */
+function sanitizeFilename(s){
+  return (s || 'idcard').replace(/[^a-z0-9_\-\. ]/gi,'_');
+}
+
+/* initial render */
+renderGeneratedList();
+setStatus('Idle','gray');
+</script>
+</body>
+</html>
